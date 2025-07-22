@@ -10,3 +10,5 @@ nltk
 pybullet
 ptan==0.8.1
 matplotlib
+
+# pip install "gymnasium[atari, accept-rom-license]"
