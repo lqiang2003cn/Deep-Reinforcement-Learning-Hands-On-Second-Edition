@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import random
-import gym
-import gym.spaces
+import gymnasium
+import gymnasium.spaces
 from collections import namedtuple
 import numpy as np
 from tensorboardX import SummaryWriter
@@ -17,11 +17,11 @@ PERCENTILE = 30
 GAMMA = 0.9
 
 
-class DiscreteOneHotWrapper(gym.ObservationWrapper):
+class DiscreteOneHotWrapper(gymnasium.ObservationWrapper):
     def __init__(self, env):
         super(DiscreteOneHotWrapper, self).__init__(env)
-        assert isinstance(env.observation_space, gym.spaces.Discrete)
-        self.observation_space = gym.spaces.Box(0.0, 1.0, (env.observation_space.n, ), dtype=np.float32)
+        assert isinstance(env.observation_space, gymnasium.spaces.Discrete)
+        self.observation_space = gymnasium.spaces.Box(0.0, 1.0, (env.observation_space.n, ), dtype=np.float32)
 
     def observation(self, observation):
         res = np.copy(self.observation_space.low)
@@ -50,21 +50,21 @@ def iterate_batches(env, net, batch_size):
     batch = []
     episode_reward = 0.0
     episode_steps = []
-    obs = env.reset()
+    obs = env.reset()[0]
     sm = nn.Softmax(dim=1)
     while True:
         obs_v = torch.FloatTensor([obs])
         act_probs_v = sm(net(obs_v))
         act_probs = act_probs_v.data.numpy()[0]
         action = np.random.choice(len(act_probs), p=act_probs)
-        next_obs, reward, is_done, _ = env.step(action)
+        next_obs, reward, is_done, _ ,_= env.step(action)
         episode_reward += reward
         episode_steps.append(EpisodeStep(observation=obs, action=action))
         if is_done:
             batch.append(Episode(reward=episode_reward, steps=episode_steps))
             episode_reward = 0.0
             episode_steps = []
-            next_obs = env.reset()
+            next_obs = env.reset()[0]
             if len(batch) == batch_size:
                 yield batch
                 batch = []
@@ -92,7 +92,7 @@ def filter_batch(batch, percentile):
 
 if __name__ == "__main__":
     random.seed(12345)
-    env = DiscreteOneHotWrapper(gym.make("FrozenLake-v0"))
+    env = DiscreteOneHotWrapper(gymnasium.make("FrozenLake-v1"))
     # env = gym.wrappers.Monitor(env, directory="mon", force=True)
     obs_size = env.observation_space.shape[0]
     n_actions = env.action_space.n
