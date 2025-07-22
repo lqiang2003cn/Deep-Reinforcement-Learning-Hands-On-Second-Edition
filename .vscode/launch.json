@@ -12,6 +12,14 @@
             "program": "/home/lq/lqtech/Deep-Reinforcement-Learning-Hands-On-Second-Edition/Chapter06/02_dqn_pong.py",
             "console": "integratedTerminal",
             "justMyCode": false
+        },
+        {
+            "name": "03_dqn_play",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/home/lq/lqtech/Deep-Reinforcement-Learning-Hands-On-Second-Edition/Chapter06/03_dqn_play.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
         }
     ]
 }
