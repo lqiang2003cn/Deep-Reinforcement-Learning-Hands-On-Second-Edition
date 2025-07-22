@@ -10,7 +10,8 @@ class DQNNet(nn.Module):
 
     def forward(self, x):
         # we always produce diagonal tensor of shape (batch_size, actions)
-        return torch.eye(x.size()[0], self.actions)
+        r = torch.eye(x.size()[0], self.actions)
+        return r
 
 
 class PolicyNet(nn.Module):
@@ -35,12 +36,12 @@ if __name__ == "__main__":
     print(net_out)
 
     selector = ptan.actions.ArgmaxActionSelector()
-    agent = ptan.agent.DQNAgent(dqn_model=net, action_selector=selector)
+    agent = ptan.agent.DQNAgent(model=net, action_selector=selector)
     ag_out = agent(torch.zeros(2, 5))
     print("Argmax:", ag_out)
 
     selector = ptan.actions.EpsilonGreedyActionSelector(epsilon=1.0)
-    agent = ptan.agent.DQNAgent(dqn_model=net, action_selector=selector)
+    agent = ptan.agent.DQNAgent(model=net, action_selector=selector)
     ag_out = agent(torch.zeros(10, 5))[0]
     print("eps=1.0:", ag_out)
 
@@ -48,7 +49,7 @@ if __name__ == "__main__":
     ag_out = agent(torch.zeros(10, 5))[0]
     print("eps=0.5:", ag_out)
 
-    selector.epsilon = 0.1
+    selector.epsilon = 0.0
     ag_out = agent(torch.zeros(10, 5))[0]
     print("eps=0.1:", ag_out)
 
@@ -58,6 +59,7 @@ if __name__ == "__main__":
     print(net_out)
 
     selector = ptan.actions.ProbabilityActionSelector()
+    # the network produces logits, not probabilities, for numerical stability in practice
     agent = ptan.agent.PolicyAgent(model=net, action_selector=selector, apply_softmax=True)
-    ag_out = agent(torch.zeros(6, 5))[0]
+    ag_out = agent(torch.zeros(6, 10))[0]
     print(ag_out)
