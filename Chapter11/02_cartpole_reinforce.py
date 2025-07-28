@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-import gym
+import gymnasium as gym
 import ptan
 import numpy as np
 from tensorboardX import SummaryWriter
@@ -45,8 +44,7 @@ if __name__ == "__main__":
     net = PGN(env.observation_space.shape[0], env.action_space.n)
     print(net)
 
-    agent = ptan.agent.PolicyAgent(net, preprocessor=ptan.agent.float32_preprocessor,
-                                   apply_softmax=True)
+    agent = ptan.agent.PolicyAgent(net, preprocessor=ptan.agent.float32_preprocessor,apply_softmax=True)
     exp_source = ptan.experience.ExperienceSourceFirstLast(env, agent, gamma=GAMMA)
 
     optimizer = optim.Adam(net.parameters(), lr=LEARNING_RATE)

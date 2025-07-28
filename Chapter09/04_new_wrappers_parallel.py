@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import gym
+import gymnasium as gym
 import ptan
 import ptan.ignite as ptan_ignite
 from datetime import datetime, timedelta
@@ -26,20 +26,15 @@ EpisodeEnded = collections.namedtuple(
 
 
 def play_func(params, net, cuda, exp_queue):
-    env = atari_wrappers.make_atari(params.env_name, skip_noop=True,
-                                    skip_maxskip=True)
-    env = atari_wrappers.wrap_deepmind(env, pytorch_img=True,
-                                       frame_stack=True,
-                                       frame_stack_count=2)
+    env = atari_wrappers.make_atari(params.env_name, skip_noop=True,skip_maxskip=True)
+    env = atari_wrappers.wrap_deepmind(env, pytorch_img=True,frame_stack=True,frame_stack_count=2)
     env.seed(common.SEED)
     device = torch.device("cuda" if cuda else "cpu")
 
-    selector = ptan.actions.EpsilonGreedyActionSelector(
-        epsilon=params.epsilon_start)
+    selector = ptan.actions.EpsilonGreedyActionSelector(epsilon=params.epsilon_start)
     epsilon_tracker = common.EpsilonTracker(selector, params)
     agent = ptan.agent.DQNAgent(net, selector, device=device)
-    exp_source = ptan.experience.ExperienceSourceFirstLast(
-        env, agent, gamma=params.gamma)
+    exp_source = ptan.experience.ExperienceSourceFirstLast(env, agent, gamma=params.gamma)
 
     for frame_idx, exp in enumerate(exp_source):
         epsilon_tracker.frame(frame_idx/BATCH_MUL)
@@ -92,35 +87,30 @@ if __name__ == "__main__":
     args = parser.parse_args()
     device = torch.device("cuda" if args.cuda else "cpu")
 
-    env = atari_wrappers.make_atari(params.env_name, skip_noop=True,
-                                    skip_maxskip=True)
-    env = atari_wrappers.wrap_deepmind(env, pytorch_img=True,
-                                       frame_stack=True,
-                                       frame_stack_count=2)
+    env = atari_wrappers.make_atari(params.env_name, skip_noop=True,skip_maxskip=True)
+    env = atari_wrappers.wrap_deepmind(env, pytorch_img=True,frame_stack=True,frame_stack_count=2)
 
     net = dqn_model.DQN(env.observation_space.shape, env.action_space.n).to(device)
     tgt_net = ptan.agent.TargetNet(net)
 
-    buffer = ptan.experience.ExperienceReplayBuffer(
-        experience_source=None, buffer_size=params.replay_size)
+    buffer = ptan.experience.ExperienceReplayBuffer(experience_source=None, buffer_size=params.replay_size)
     optimizer = optim.Adam(net.parameters(), lr=params.learning_rate)
 
     # start subprocess and experience queue
     exp_queue = mp.Queue(maxsize=BATCH_MUL*2)
-    play_proc = mp.Process(target=play_func, args=(params, net, args.cuda,
-                                                   exp_queue))
+    play_proc = mp.Process(target=play_func, args=(params, net, args.cuda,exp_queue))
     play_proc.start()
     fps_handler = ptan_ignite.EpisodeFPSHandler()
     batch_generator = BatchGenerator(buffer, exp_queue, fps_handler, params.replay_initial, params.batch_size)
 
     def process_batch(engine, batch):
         optimizer.zero_grad()
-        loss_v = common.calc_loss_dqn(batch, net, tgt_net.target_model,
-                                      gamma=params.gamma, device=device)
+        loss_v = common.calc_loss_dqn(batch, net, tgt_net.target_model,gamma=params.gamma, device=device)
         loss_v.backward()
         optimizer.step()
         if engine.state.iteration % params.target_net_sync == 0:
             tgt_net.sync()
+
         return {
             "loss": loss_v.item(),
             "epsilon": batch_generator.epsilon,
@@ -153,8 +143,7 @@ if __name__ == "__main__":
 
     # write to tensorboard every 100 iterations
     ptan_ignite.PeriodicEvents().attach(engine)
-    handler = tb_logger.OutputHandler(tag="train", metric_names=['avg_loss', 'avg_fps'],
-                                      output_transform=lambda a: a)
+    handler = tb_logger.OutputHandler(tag="train", metric_names=['avg_loss', 'avg_fps'],output_transform=lambda a: a)
     tb.attach(engine, log_handler=handler, event_name=ptan_ignite.PeriodEvents.ITERS_100_COMPLETED)
 
     engine.run(batch_generator)

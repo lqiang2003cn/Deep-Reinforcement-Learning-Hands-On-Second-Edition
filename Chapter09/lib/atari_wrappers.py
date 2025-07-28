@@ -2,8 +2,8 @@ import numpy as np
 import os
 os.environ.setdefault('PATH', '')
 from collections import deque
-import gym
-from gym import spaces
+import gymnasium as gym
+from gymnasium import spaces
 
 
 USE_PIL = True
@@ -276,10 +276,10 @@ class FrameStack(gym.Wrapper):
         self.observation_space = spaces.Box(low=0, high=255, shape=(shp[0]*k, shp[1], shp[2]), dtype=env.observation_space.dtype)
 
     def reset(self):
-        ob = self.env.reset()
+        ob, _ = self.env.reset()
         for _ in range(self.k):
             self.frames.append(ob)
-        return self._get_ob()
+        return self._get_ob(), None
 
     def step(self, action):
         ob, reward, done, info = self.env.step(action)
@@ -311,7 +311,7 @@ class SkipEnv(gym.Wrapper):
         total_reward = 0.0
         done = None
         for i in range(self._skip):
-            obs, reward, done, info = self.env.step(action)
+            obs, reward, done, info, _ = self.env.step(action)
             total_reward += reward
             if done:
                 break
