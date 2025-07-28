@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-import gym
+import gymnasium as gym
 import ptan
 import numpy as np
 from tensorboardX import SummaryWriter
@@ -37,6 +36,10 @@ def smooth(old: Optional[float], val: float, alpha: float = 0.95) -> float:
         return val
     return old * alpha + (1-alpha)*val
 
+# improvements on REINFORCEMENT
+# 1. no full episodes are needed, using N-steps rewards as an estimation of Q(s,a). This might not as accurate as full episode, but is more efficient
+# 2. moving average of rewards: calculate the average of rewards for all samples to avoid high gradient variance
+# 3. exploration: avoid local optimal policy using entropy bonus
 
 if __name__ == "__main__":
     env = gym.make("CartPole-v0")
@@ -45,10 +48,11 @@ if __name__ == "__main__":
     net = PGN(env.observation_space.shape[0], env.action_space.n)
     print(net)
 
-    agent = ptan.agent.PolicyAgent(net, preprocessor=ptan.agent.float32_preprocessor,
-                                   apply_softmax=True)
-    exp_source = ptan.experience.ExperienceSourceFirstLast(
-        env, agent, gamma=GAMMA, steps_count=REWARD_STEPS)
+    # apply_softmax is used in _net_filter, which postprocesses the output of the forward method of the network.
+    agent = ptan.agent.PolicyAgent(net, preprocessor=ptan.agent.float32_preprocessor,apply_softmax=True)
+    
+    # point 1:no full episodes are needed
+    exp_source = ptan.experience.ExperienceSourceFirstLast(env, agent, gamma=GAMMA, steps_count=REWARD_STEPS)
 
     optimizer = optim.Adam(net.parameters(), lr=LEARNING_RATE)
 
@@ -63,6 +67,7 @@ if __name__ == "__main__":
 
     for step_idx, exp in enumerate(exp_source):
         reward_sum += exp.reward
+        # point 2:the moving average of discounted rewards
         baseline = reward_sum / (step_idx + 1)
         writer.add_scalar("baseline", baseline, step_idx)
         batch_states.append(exp.state)
@@ -76,8 +81,7 @@ if __name__ == "__main__":
             reward = new_rewards[0]
             total_rewards.append(reward)
             mean_rewards = float(np.mean(total_rewards[-100:]))
-            print("%d: reward: %6.2f, mean_100: %6.2f, episodes: %d" % (
-                step_idx, reward, mean_rewards, done_episodes))
+            print("%d: reward: %6.2f, mean_100: %6.2f, episodes: %d" % (step_idx, reward, mean_rewards, done_episodes))
             writer.add_scalar("reward", reward, step_idx)
             writer.add_scalar("reward_100", mean_rewards, step_idx)
             writer.add_scalar("episodes", done_episodes, step_idx)
@@ -98,15 +102,19 @@ if __name__ == "__main__":
         log_prob_actions_v = batch_scale_v * log_prob_v[range(BATCH_SIZE), batch_actions_t]
         loss_policy_v = -log_prob_actions_v.mean()
 
+        # point 3. exploration using entropy bonus
         prob_v = F.softmax(logits_v, dim=1)
         entropy_v = -(prob_v * log_prob_v).sum(dim=1).mean()
         entropy_loss_v = -ENTROPY_BETA * entropy_v
+        
+        # two losses combined
         loss_v = loss_policy_v + entropy_loss_v
 
         loss_v.backward()
         optimizer.step()
 
-        # calc KL-div
+        # calc KL-div: how new distribution is different from the old distribution
+        # if KL-div is so huge, it's not a good sign
         new_logits_v = net(states_v)
         new_prob_v = F.softmax(new_logits_v, dim=1)
         kl_div_v = -((new_prob_v / prob_v).log() * prob_v).sum(dim=1).mean()

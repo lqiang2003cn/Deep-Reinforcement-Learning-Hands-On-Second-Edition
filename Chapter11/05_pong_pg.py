@@ -25,6 +25,13 @@ GRAD_L2_CLIP = 0.1
 ENV_COUNT = 32
 
 
+# improvements on REINFORCEMENT
+# 1. N-steps: no full episodes are needed, using N-steps rewards as an estimation of Q(s,a). This might not as accurate as full episode, but is more efficient
+# 2. moving average of rewards: The baseline is estimated with a moving average for 1M past transitions, instead of all examples
+# 3. exploration: avoid local optimal policy using entropy bonus
+# 4. parallel environment: use several environments at the same time
+# 5. clip gradients: Gradients are clipped to improve training stability
+
 def make_env():
     return ptan.common.wrappers.wrap_dqn(gym.make("PongNoFrameskip-v4"))
 
@@ -49,11 +56,12 @@ class MeanBuffer:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--cuda", default=False, action="store_true", help="Enable cuda")
+    parser.add_argument("--cuda", default=True, action="store_true", help="Enable cuda")
     parser.add_argument("-n", '--name', required=True, help="Name of the run")
     args = parser.parse_args()
     device = torch.device("cuda" if args.cuda else "cpu")
 
+    # point 4: several environments are used
     envs = [make_env() for _ in range(ENV_COUNT)]
     writer = SummaryWriter(comment="-pong-pg-" + args.name)
 
@@ -61,6 +69,8 @@ if __name__ == "__main__":
     print(net)
 
     agent = ptan.agent.PolicyAgent(net, apply_softmax=True, device=device)
+
+    # point 1: using N-steps, don't wait for full episodes
     exp_source = ptan.experience.ExperienceSourceFirstLast(envs, agent, gamma=GAMMA, steps_count=REWARD_STEPS)
 
     optimizer = optim.Adam(net.parameters(), lr=LEARNING_RATE, eps=1e-3)
@@ -79,8 +89,10 @@ if __name__ == "__main__":
     with common.RewardTracker(writer, stop_reward=18) as tracker:
         for step_idx, exp in enumerate(exp_source):
             baseline_buf.add(exp.reward)
+            
+            # point 2: moving average over latest 1M transitions, not all transitions
             baseline = baseline_buf.mean()
-            batch_states.append(np.array(exp.state, copy=False))
+            batch_states.append(np.asarray(exp.state))
             batch_actions.append(int(exp.action))
             batch_scales.append(exp.reward - baseline)
 
@@ -106,11 +118,14 @@ if __name__ == "__main__":
             log_prob_actions_v = batch_scale_v * log_prob_v[range(BATCH_SIZE), batch_actions_t]
             loss_policy_v = -log_prob_actions_v.mean()
 
+            # point 3: avoid local optimal policy using entropy bonus
             prob_v = F.softmax(logits_v, dim=1)
             entropy_v = -(prob_v * log_prob_v).sum(dim=1).mean()
             entropy_loss_v = -ENTROPY_BETA * entropy_v
             loss_v = loss_policy_v + entropy_loss_v
             loss_v.backward()
+
+            # point 5: clip gradients and then optimize
             nn_utils.clip_grad_norm_(net.parameters(), GRAD_L2_CLIP)
             optimizer.step()
 

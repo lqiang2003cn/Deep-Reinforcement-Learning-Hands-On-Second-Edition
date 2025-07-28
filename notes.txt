@@ -1,0 +1,5 @@
+# Policy Gradient: improvements on REINFORCEMENT
+# 1. full episode: no full episodes are needed, using N-steps rewards as an estimation of Q(s,a). This might not as accurate as full episode, but is more efficient
+# 2. high gradient variance：moving average of rewards, to avoid high gradient variance
+# 3. exploration: avoid local optimal policy using entropy bonus
+# 4. correlation between sample: parallel environments are used to avoid sample correlations

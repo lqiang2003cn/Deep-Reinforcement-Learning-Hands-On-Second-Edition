@@ -38,6 +38,7 @@ def calc_loss_rainbow(batch, batch_weights, net, tgt_net, gamma,
             next_state_values = tgt_net(next_states_v).gather(
                 1, next_state_actions).squeeze(-1)
         else:
+            # MAXaQ(s,a)
             next_state_values = tgt_net(next_states_v).max(1)[0]
         next_state_values[done_mask] = 0.0
         expected_state_action_values = \
