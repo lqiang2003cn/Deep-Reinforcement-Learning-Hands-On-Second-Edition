@@ -10,3 +10,17 @@ Policy-Gradient
 # 3. exploration: avoid local optimal policy using entropy bonus
 # 4. correlation between sample: parallel environments are used to avoid sample correlations
 # 5. clip gradients: Gradients are clipped to improve training stability
+
+######################### On-Policy and Off-Policy #########################
+On-Policy: 
+1. our current policy interact with the environments
+2. the interaction generated some fresh experiences
+3. we must use these fresh experiences to train the network
+4. sample inefficiency: throw away experiences after one single training
+
+Off-Policy:
+1. replay buffer
+
+######################### Value-based and Policy-based #########################
+Value-based Off-policy
+Policy-based On-policy
