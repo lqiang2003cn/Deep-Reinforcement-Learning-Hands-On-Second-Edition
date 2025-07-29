@@ -19,8 +19,8 @@ ENTROPY_BETA = 0.01
 REWARD_STEPS = 4
 CLIP_GRAD = 0.1
 
-PROCESSES_COUNT = 8
-NUM_ENVS = 816
+PROCESSES_COUNT = 10
+NUM_ENVS = 32
 
 GRAD_BATCH = 64
 TRAIN_BATCH = 2
@@ -56,8 +56,6 @@ def grads_func(proc_name, net, device, train_queue):
             for exp in exp_source:
                 frame_idx += 1
                 new_rewards = exp_source.pop_total_rewards()
-                if new_rewards:
-                    print(f"episode done, reward is {new_rewards}")
                 if new_rewards and tracker.reward(new_rewards[0], frame_idx):
                     break
 
