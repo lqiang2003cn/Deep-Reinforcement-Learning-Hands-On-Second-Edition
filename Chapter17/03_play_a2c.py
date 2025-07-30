@@ -17,7 +17,7 @@ ENV_ID = "Hopper-v5"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--model", default='/home/lq/lqtech/Deep-Reinforcement-Learning-Hands-On-Second-Edition/saves/a2c-a2c_HalfCheetah/best_+300.621_31000.dat', help="Model file to load")
+    parser.add_argument("-m", "--model", default='/home/lq/lqtech/Deep-Reinforcement-Learning-Hands-On-Second-Edition/saves/a2c-a2c_HalfCheetah/best_+2616.401_2963000.dat', help="Model file to load")
     parser.add_argument("-e", "--env", default=ENV_ID, help="Environment name to use, default=" + ENV_ID)
     parser.add_argument("-r", "--record", default=True,  help="If specified, sets the recording dir, default=Disabled")
     args = parser.parse_args()
