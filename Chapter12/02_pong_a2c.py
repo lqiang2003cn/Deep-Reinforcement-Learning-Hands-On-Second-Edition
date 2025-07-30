@@ -1,3 +1,6 @@
+import sys
+sys.path.append("/home/lq/lqtech/Deep-Reinforcement-Learning-Hands-On-Second-Edition/ptan")
+
 import gymnasium as gym
 import ptan
 import numpy as np
@@ -73,21 +76,21 @@ def unpack_batch(batch, net, device='cpu'):
     not_done_idx = []
     last_states = []
     for idx, exp in enumerate(batch):
-        states.append(np.array(exp.state, copy=False))
+        states.append(np.asarray(exp.state))
         actions.append(int(exp.action))
         rewards.append(exp.reward)
         if exp.last_state is not None:
             not_done_idx.append(idx)
-            last_states.append(np.array(exp.last_state, copy=False))
+            last_states.append(np.asarray(exp.last_state))
 
-    states_v = torch.FloatTensor(np.array(states, copy=False)).to(device)
+    states_v = torch.FloatTensor(np.asarray(states)).to(device)
     actions_t = torch.LongTensor(actions).to(device)
 
     # handle rewards
     # rewards_np is set as the immediate rewards obtained in the N-step rollout
     rewards_np = np.array(rewards, dtype=np.float32)
     if not_done_idx:
-        last_states_v = torch.FloatTensor(np.array(last_states, copy=False)).to(device)
+        last_states_v = torch.FloatTensor(np.asarray(last_states)).to(device)
         last_vals_v = net(last_states_v)[1]
         last_vals_np = last_vals_v.data.cpu().numpy()[:, 0]
         
@@ -110,6 +113,12 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--name", default="pong_a2c", help="Name of the run")
     args = parser.parse_args()
     device = torch.device("cuda" if args.cuda else "cpu")
+
+
+    import ale_py
+
+    gym.register_envs(ale_py)
+
 
     make_env = lambda: ptan.common.wrappers.wrap_dqn(gym.make("PongNoFrameskip-v4"))
     envs = [make_env() for _ in range(NUM_ENVS)]

@@ -28,8 +28,7 @@ class ModelA2C(nn.Module):
 
     def forward(self, x):
         base_out = self.base(x)
-        return self.mu(base_out), self.var(base_out), \
-               self.value(base_out)
+        return self.mu(base_out), self.var(base_out), self.value(base_out)
 
 
 class DDPGActor(nn.Module):
@@ -173,7 +172,6 @@ class AgentD4PG(ptan.agent.BaseAgent):
         states_v = states_v.to(self.device)
         mu_v = self.net(states_v)
         actions = mu_v.data.cpu().numpy()
-        actions += self.epsilon * np.random.normal(
-            size=actions.shape)
+        actions += self.epsilon * np.random.normal(size=actions.shape)
         actions = np.clip(actions, -1, 1)
         return actions, agent_states

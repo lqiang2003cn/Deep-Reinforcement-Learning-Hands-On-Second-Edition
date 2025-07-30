@@ -11,6 +11,11 @@ pybullet
 ptan==0.8.1
 matplotlib
 
+
 # then execute the following two commands:
+# sudo apt install swig
+# sudo apt-get install patchelf
 # pip install ptan==0.8.1
 # pip install "gymnasium[atari, accept-rom-license]"
+# pip install "gymnasium[all]"
+# pip install mujoco_py
