@@ -1,9 +1,10 @@
-#!/usr/bin/env python3
+import sys
+sys.path.append("/home/lq/lqtech/Deep-Reinforcement-Learning-Hands-On-Second-Edition/ptan")
+
 import os
 import ptan
 import time
-import gym
-import pybullet_envs
+import gymnasium as gym
 import argparse
 from tensorboardX import SummaryWriter
 import numpy as np
@@ -14,8 +15,8 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 
-
-ENV_ID = "MinitaurBulletEnv-v0"
+ENV_ID = "Hopper-v5"
+# ENV_ID = "MinitaurBulletEnv-v0"
 GAMMA = 0.99
 BATCH_SIZE = 64
 LEARNING_RATE = 1e-4
@@ -29,13 +30,13 @@ def test_net(net, env, count=10, device="cpu"):
     rewards = 0.0
     steps = 0
     for _ in range(count):
-        obs = env.reset()
+        obs = env.reset()[0]
         while True:
             obs_v = ptan.agent.float32_preprocessor([obs]).to(device)
             mu_v = net(obs_v)
             action = mu_v.squeeze(dim=0).data.cpu().numpy()
             action = np.clip(action, -1, 1)
-            obs, reward, done, _ = env.step(action)
+            obs, reward, done, _, _ = env.step(action)
             rewards += reward
             steps += 1
             if done:
@@ -45,8 +46,8 @@ def test_net(net, env, count=10, device="cpu"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--cuda", default=False, action='store_true', help='Enable CUDA')
-    parser.add_argument("-n", "--name", required=True, help="Name of the run")
+    parser.add_argument("--cuda", default=True, action='store_true', help='Enable CUDA')
+    parser.add_argument("-n", "--name", default="ddpg_hopper", help="Name of the run")
     args = parser.parse_args()
     device = torch.device("cuda" if args.cuda else "cpu")
 
@@ -56,31 +57,28 @@ if __name__ == "__main__":
     env = gym.make(ENV_ID)
     test_env = gym.make(ENV_ID)
 
-    act_net = model.DDPGActor(
-        env.observation_space.shape[0],
-        env.action_space.shape[0]).to(device)
-    crt_net = model.DDPGCritic(
-        env.observation_space.shape[0],
-        env.action_space.shape[0]).to(device)
+    act_net = model.DDPGActor(env.observation_space.shape[0],env.action_space.shape[0]).to(device)
+    crt_net = model.DDPGCritic(env.observation_space.shape[0],env.action_space.shape[0]).to(device)
     print(act_net)
     print(crt_net)
+
+    # estimating values, as in DQN, so target net is needed to decouple the correlation between current step value and last step values
     tgt_act_net = ptan.agent.TargetNet(act_net)
     tgt_crt_net = ptan.agent.TargetNet(crt_net)
 
     writer = SummaryWriter(comment="-ddpg_" + args.name)
+
+    # just use actor network, to interact with environment, no need to use critic network when interacting with environment
     agent = model.AgentDDPG(act_net, device=device)
-    exp_source = ptan.experience.ExperienceSourceFirstLast(
-        env, agent, gamma=GAMMA, steps_count=1)
-    buffer = ptan.experience.ExperienceReplayBuffer(
-        exp_source, buffer_size=REPLAY_SIZE)
+    exp_source = ptan.experience.ExperienceSourceFirstLast(env, agent, gamma=GAMMA, steps_count=1)
+    buffer = ptan.experience.ExperienceReplayBuffer(exp_source, buffer_size=REPLAY_SIZE)
     act_opt = optim.Adam(act_net.parameters(), lr=LEARNING_RATE)
     crt_opt = optim.Adam(crt_net.parameters(), lr=LEARNING_RATE)
 
     frame_idx = 0
     best_reward = None
     with ptan.common.utils.RewardTracker(writer) as tracker:
-        with ptan.common.utils.TBMeanTracker(
-                writer, batch_size=10) as tb_tracker:
+        with ptan.common.utils.TBMeanTracker(writer, batch_size=10) as tb_tracker:
             while True:
                 frame_idx += 1
                 buffer.populate(1)
@@ -94,46 +92,46 @@ if __name__ == "__main__":
                     continue
 
                 batch = buffer.sample(BATCH_SIZE)
-                states_v, actions_v, rewards_v, \
-                dones_mask, last_states_v = \
-                    common.unpack_batch_ddqn(batch, device)
+                states_v, actions_v, rewards_v, dones_mask, last_states_v = common.unpack_batch_ddqn(batch, device)
 
                 # train critic
                 crt_opt.zero_grad()
+
+                # regard action vector(a1,a2,a3) as one action
                 q_v = crt_net(states_v, actions_v)
-                last_act_v = tgt_act_net.target_model(
-                    last_states_v)
-                q_last_v = tgt_crt_net.target_model(
-                    last_states_v, last_act_v)
+                # should use no_grad to save computional power
+                last_act_v = tgt_act_net.target_model(last_states_v)
+                q_last_v = tgt_crt_net.target_model(last_states_v, last_act_v)
                 q_last_v[dones_mask] = 0.0
-                q_ref_v = rewards_v.unsqueeze(dim=-1) + \
-                          q_last_v * GAMMA
+                q_ref_v = rewards_v.unsqueeze(dim=-1) + q_last_v * GAMMA
                 critic_loss_v = F.mse_loss(q_v, q_ref_v.detach())
                 critic_loss_v.backward()
                 crt_opt.step()
-                tb_tracker.track("loss_critic",
-                                 critic_loss_v, frame_idx)
-                tb_tracker.track("critic_ref",
-                                 q_ref_v.mean(), frame_idx)
-
+                tb_tracker.track("loss_critic",critic_loss_v, frame_idx)
+                tb_tracker.track("critic_ref",q_ref_v.mean(), frame_idx)
                 # train actor
                 act_opt.zero_grad()
+
+
+                # actor's job is: given a state, generate an action that can obtain a large Q(s,a) value, which is estimated by critic network
+                # so, crt_net(s,a) should be maximize, that is, -crt_net(s,a) should be minimized
                 cur_actions_v = act_net(states_v)
+                # maximize the value of critic's output? adjust actor's network to make critic network's 
                 actor_loss_v = -crt_net(states_v, cur_actions_v)
                 actor_loss_v = actor_loss_v.mean()
                 actor_loss_v.backward()
                 act_opt.step()
-                tb_tracker.track("loss_actor",
-                                 actor_loss_v, frame_idx)
+                tb_tracker.track("loss_actor",actor_loss_v, frame_idx)
+
 
                 tgt_act_net.alpha_sync(alpha=1 - 1e-3)
                 tgt_crt_net.alpha_sync(alpha=1 - 1e-3)
 
+
                 if frame_idx % TEST_ITERS == 0:
                     ts = time.time()
                     rewards, steps = test_net(act_net, test_env, device=device)
-                    print("Test done in %.2f sec, reward %.3f, steps %d" % (
-                        time.time() - ts, rewards, steps))
+                    print("Test done in %.2f sec, reward %.3f, steps %d" % (time.time() - ts, rewards, steps))
                     writer.add_scalar("test_reward", rewards, frame_idx)
                     writer.add_scalar("test_steps", steps, frame_idx)
                     if best_reward is None or best_reward < rewards:

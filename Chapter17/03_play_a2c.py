@@ -9,7 +9,7 @@ from lib import model
 
 import numpy as np
 import torch
-from gymnasium.wrappers import RecordEpisodeStatistics, RecordVideo
+from gymnasium.wrappers import RecordVideo
 
 # ENV_ID = "MinitaurBulletEnv-v0"
 ENV_ID = "Hopper-v5"

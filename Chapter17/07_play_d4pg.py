@@ -16,7 +16,7 @@ ENV_ID = "Hopper-v5"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--model", default="/home/lq/lqtech/Deep-Reinforcement-Learning-Hands-On-Second-Edition/saves/ddpg-ddpg_hopper/best_+8965.868_144000.dat", help="Model file to load")
+    parser.add_argument("-m", "--model", default="/home/lq/lqtech/Deep-Reinforcement-Learning-Hands-On-Second-Edition/saves/d4pg-d4pg/best_+432.499_541000.dat", help="Model file to load")
     parser.add_argument("-e", "--env", default=ENV_ID, help="Environment name to use, default=" + ENV_ID)
     parser.add_argument("-r", "--record", default=True, help="If specified, sets the recording dir, default=Disabled")
     args = parser.parse_args()
@@ -30,6 +30,7 @@ if __name__ == "__main__":
             episode_trigger=lambda x: True    # Record every episode
         )
 
+    # d4pg uses the same actor as ddpg
     net = model.DDPGActor(env.observation_space.shape[0], env.action_space.shape[0])
     net.load_state_dict(torch.load(args.model))
 
