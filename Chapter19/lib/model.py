@@ -76,6 +76,8 @@ class AgentA2C(ptan.agent.BaseAgent):
 
         mu_v = self.net(states_v)
         mu = mu_v.data.cpu().numpy()
+        
+        # exploration:adding noise
         logstd = self.net.logstd.data.cpu().numpy()
         rnd = np.random.normal(size=logstd.shape)
         actions = mu + np.exp(logstd) * rnd

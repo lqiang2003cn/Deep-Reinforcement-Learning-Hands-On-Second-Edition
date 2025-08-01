@@ -28,7 +28,6 @@ if __name__ == "__main__":
     # spec._kwargs['render'] = False
     
     env = gym.make(args.env, render_mode="rgb_array")
-
     if args.record:
         env = RecordVideo(
             env,

@@ -1,4 +1,8 @@
-#!/usr/bin/env python3
+import sys
+sys.path.append("/home/lq/lqtech/Deep-Reinforcement-Learning-Hands-On-Second-Edition/ptan")
+
+# from ..ptan import ptan
+
 import os
 import math
 import ptan
@@ -15,7 +19,10 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 
-ENV_ID = "HalfCheetahBulletEnv-v0"
+# ENV_ID = "HalfCheetahBulletEnv-v0"
+# ENV_ID = "HalfCheetah-v4"
+ENV_ID = "Ant-v4"
+
 GAMMA = 0.99
 REWARD_STEPS = 5
 BATCH_SIZE = 32
@@ -29,8 +36,8 @@ TEST_ITERS = 100000
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--cuda", default=False, action='store_true', help='Enable CUDA')
-    parser.add_argument("-n", "--name", required=True, help="Name of the run")
+    parser.add_argument("--cuda", default=True, action='store_true', help='Enable CUDA')
+    parser.add_argument("-n", "--name", default="a2c_baseline_ant", help="Name of the run")
     parser.add_argument("-e", "--env", default=ENV_ID, help="Environment id, default=" + ENV_ID)
     args = parser.parse_args()
     device = torch.device("cuda" if args.cuda else "cpu")
@@ -48,6 +55,7 @@ if __name__ == "__main__":
 
     writer = SummaryWriter(comment="-a2c_" + args.name)
     agent = model.AgentA2C(net_act, device=device)
+    # no replay buffer
     exp_source = ptan.experience.ExperienceSourceFirstLast(envs, agent, GAMMA, steps_count=REWARD_STEPS)
 
     opt_act = optim.Adam(net_act.parameters(), lr=LEARNING_RATE_ACTOR)
@@ -67,8 +75,7 @@ if __name__ == "__main__":
                 if step_idx % TEST_ITERS == 0:
                     ts = time.time()
                     rewards, steps = test_net(net_act, test_env, device=device)
-                    print("Test done in %.2f sec, reward %.3f, steps %d" % (
-                        time.time() - ts, rewards, steps))
+                    print("Test done in %.2f sec, reward %.3f, steps %d" % (time.time() - ts, rewards, steps))
                     writer.add_scalar("test_reward", rewards, step_idx)
                     writer.add_scalar("test_steps", steps, step_idx)
                     if best_reward is None or best_reward < rewards:
@@ -83,8 +90,7 @@ if __name__ == "__main__":
                 if len(batch) < BATCH_SIZE:
                     continue
 
-                states_v, actions_v, vals_ref_v = \
-                    common.unpack_batch_a2c(batch, net_crt, last_val_gamma=GAMMA ** REWARD_STEPS, device=device)
+                states_v, actions_v, vals_ref_v = common.unpack_batch_a2c(batch, net_crt, last_val_gamma=GAMMA ** REWARD_STEPS, device=device)
                 batch.clear()
 
                 opt_crt.zero_grad()

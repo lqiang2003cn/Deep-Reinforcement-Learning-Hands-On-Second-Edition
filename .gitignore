@@ -5,3 +5,5 @@ __pycache__
 *.dat
 videos/rl-video-episode-0.mp4
 Hopper-v5/eval-episode-0.mp4
+Ant-v4/eval-episode-0.mp4
+*.mp4
