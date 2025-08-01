@@ -3,8 +3,7 @@ import os
 import math
 import ptan
 import time
-import gym
-import pybullet_envs
+import gymnasium as gym
 import argparse
 from tensorboardX import SummaryWriter
 
