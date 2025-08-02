@@ -19,7 +19,6 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 
-# ENV_ID = "HalfCheetahBulletEnv-v0"
 # ENV_ID = "HalfCheetah-v4"
 ENV_ID = "Ant-v4"
 

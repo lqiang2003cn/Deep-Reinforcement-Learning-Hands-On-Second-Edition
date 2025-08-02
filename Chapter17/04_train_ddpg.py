@@ -94,9 +94,8 @@ if __name__ == "__main__":
                 batch = buffer.sample(BATCH_SIZE)
                 states_v, actions_v, rewards_v, dones_mask, last_states_v = common.unpack_batch_ddqn(batch, device)
 
-                # train critic
+                ########################## train critic ##########################
                 crt_opt.zero_grad()
-
                 # regard action vector(a1,a2,a3) as one action
                 q_v = crt_net(states_v, actions_v)
                 # should use no_grad to save computional power
@@ -109,14 +108,14 @@ if __name__ == "__main__":
                 crt_opt.step()
                 tb_tracker.track("loss_critic",critic_loss_v, frame_idx)
                 tb_tracker.track("critic_ref",q_ref_v.mean(), frame_idx)
-                # train actor
+
+
+                ########################## train actor ##########################
                 act_opt.zero_grad()
-
-
                 # actor's job is: given a state, generate an action that can obtain a large Q(s,a) value, which is estimated by critic network
                 # so, crt_net(s,a) should be maximize, that is, -crt_net(s,a) should be minimized
                 cur_actions_v = act_net(states_v)
-                # maximize the value of critic's output? adjust actor's network to make critic network's 
+                # maximize the value of critic's output? adjust actor's network to make critic network's output greater, 
                 actor_loss_v = -crt_net(states_v, cur_actions_v)
                 actor_loss_v = actor_loss_v.mean()
                 actor_loss_v.backward()

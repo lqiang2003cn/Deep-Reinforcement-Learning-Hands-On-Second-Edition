@@ -1,10 +1,11 @@
-#!/usr/bin/env python3
+import sys
+sys.path.append("/home/lq/lqtech/Deep-Reinforcement-Learning-Hands-On-Second-Edition/ptan")
+
 import os
 import math
 import ptan
 import time
-import gym
-import pybullet_envs
+import gymnasium as gym
 import argparse
 from tensorboardX import SummaryWriter
 
@@ -16,7 +17,9 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 
-ENV_ID = "HalfCheetahBulletEnv-v0"
+ENV_ID = "HalfCheetah-v4"
+# ENV_ID = "Ant-v4"
+
 GAMMA = 0.99
 GAE_LAMBDA = 0.95
 
@@ -44,10 +47,8 @@ def calc_adv_ref(trajectory, net_crt, states_v, device="cpu"):
     last_gae = 0.0
     result_adv = []
     result_ref = []
-    for val, next_val, (exp,) in zip(reversed(values[:-1]),
-                                     reversed(values[1:]),
-                                     reversed(trajectory[:-1])):
-        if exp.done:
+    for val, next_val, (exp,) in zip(reversed(values[:-1]),reversed(values[1:]),reversed(trajectory[:-1])):
+        if exp.done_trunc:
             delta = exp.reward - val
             last_gae = delta
         else:
@@ -63,8 +64,8 @@ def calc_adv_ref(trajectory, net_crt, states_v, device="cpu"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--cuda", default=False, action='store_true', help='Enable CUDA')
-    parser.add_argument("-n", "--name", required=True, help="Name of the run")
+    parser.add_argument("--cuda", default=True, action='store_true', help='Enable CUDA')
+    parser.add_argument("-n", "--name", default="ant_v4", help="Name of the run")
     parser.add_argument("-e", "--env", default=ENV_ID, help="Environment id, default=" + ENV_ID)
     parser.add_argument("--lrc", default=LEARNING_RATE_CRITIC, type=float, help="Critic learning rate")
     parser.add_argument("--lra", default=LEARNING_RATE_ACTOR, type=float, help="Actor learning rate")
@@ -102,8 +103,7 @@ if __name__ == "__main__":
             if step_idx % TEST_ITERS == 0:
                 ts = time.time()
                 rewards, steps = test_net(net_act, test_env, device=device)
-                print("Test done in %.2f sec, reward %.3f, steps %d" % (
-                    time.time() - ts, rewards, steps))
+                print("Test done in %.2f sec, reward %.3f, steps %d" % (time.time() - ts, rewards, steps))
                 writer.add_scalar("test_reward", rewards, step_idx)
                 writer.add_scalar("test_steps", steps, step_idx)
                 if best_reward is None or best_reward < rewards:
@@ -124,17 +124,18 @@ if __name__ == "__main__":
             traj_states_v = traj_states_v.to(device)
             traj_actions_v = torch.FloatTensor(traj_actions)
             traj_actions_v = traj_actions_v.to(device)
-            traj_adv_v, traj_ref_v = calc_adv_ref(
-                trajectory, net_crt, traj_states_v, device=device)
+            
+            # based on the experiences gathered from the environment, calculate the A(s,a) and V(s)
+            traj_adv_v, traj_ref_v = calc_adv_ref(trajectory, net_crt, traj_states_v, device=device)
+            # calculating all the A(s,a) and V(s) using current network
             mu_v = net_act(traj_states_v)
-            old_logprob_v = calc_logprob(
-                mu_v, net_act.logstd, traj_actions_v)
+            old_logprob_v = calc_logprob(mu_v, net_act.logstd, traj_actions_v)
 
             # normalize advantages
             traj_adv_v = traj_adv_v - torch.mean(traj_adv_v)
             traj_adv_v /= torch.std(traj_adv_v)
 
-            # drop last entry from the trajectory, an our adv and ref value calculated without it
+            # drop last entry from the trajectory, as our adv and ref value calculated without it
             trajectory = trajectory[:-1]
             old_logprob_v = old_logprob_v[:-1].detach()
 
@@ -142,40 +143,36 @@ if __name__ == "__main__":
             sum_loss_policy = 0.0
             count_steps = 0
 
+            # 把整个sequence的log(pi(s))作为old probability, 把其中的64个样本当做当前？
             for epoch in range(PPO_EPOCHES):
-                for batch_ofs in range(0, len(trajectory),
-                                       PPO_BATCH_SIZE):
+                # range(start, end, step):(0,2049,64)=>(0,64,128,192,...)                
+                for batch_ofs in range(0, len(trajectory),PPO_BATCH_SIZE):
                     batch_l = batch_ofs + PPO_BATCH_SIZE
                     states_v = traj_states_v[batch_ofs:batch_l]
                     actions_v = traj_actions_v[batch_ofs:batch_l]
                     batch_adv_v = traj_adv_v[batch_ofs:batch_l]
                     batch_adv_v = batch_adv_v.unsqueeze(-1)
                     batch_ref_v = traj_ref_v[batch_ofs:batch_l]
-                    batch_old_logprob_v = \
-                        old_logprob_v[batch_ofs:batch_l]
+                    batch_old_logprob_v = old_logprob_v[batch_ofs:batch_l]
 
                     # critic training
                     opt_crt.zero_grad()
                     value_v = net_crt(states_v)
-                    loss_value_v = F.mse_loss(
-                        value_v.squeeze(-1), batch_ref_v)
+                    loss_value_v = F.mse_loss(value_v.squeeze(-1), batch_ref_v)
                     loss_value_v.backward()
                     opt_crt.step()
 
                     # actor training
                     opt_act.zero_grad()
+                    # for the first epoch and for the first batch, the mu_v is the same as: mu_v = net_act(traj_states_v)
+                    # but after the first epoch and first batch, when the net_act's parameters are updated, the following mu_v is different from the batch_old_logprob_v
                     mu_v = net_act(states_v)
-                    logprob_pi_v = calc_logprob(
-                        mu_v, net_act.logstd, actions_v)
-                    ratio_v = torch.exp(
-                        logprob_pi_v - batch_old_logprob_v)
+                    logprob_pi_v = calc_logprob(mu_v, net_act.logstd, actions_v)
+                    ratio_v = torch.exp(logprob_pi_v - batch_old_logprob_v)
                     surr_obj_v = batch_adv_v * ratio_v
-                    c_ratio_v = torch.clamp(ratio_v,
-                                            1.0 - PPO_EPS,
-                                            1.0 + PPO_EPS)
+                    c_ratio_v = torch.clamp(ratio_v,1.0 - PPO_EPS,1.0 + PPO_EPS)
                     clipped_surr_v = batch_adv_v * c_ratio_v
-                    loss_policy_v = -torch.min(
-                        surr_obj_v, clipped_surr_v).mean()
+                    loss_policy_v = -torch.min(surr_obj_v, clipped_surr_v).mean()
                     loss_policy_v.backward()
                     opt_act.step()
 
