@@ -103,7 +103,7 @@ if __name__ == "__main__":
                 tb_tracker.track("loss_q1", q1_loss_v, frame_idx)
                 tb_tracker.track("loss_q2", q2_loss_v, frame_idx)
 
-                ### Critic: using sampled action distribution to estimate values?
+                ### Critic:using sampled action distribution to estimate values?
                 crt_opt.zero_grad()
                 val_v = crt_net(states_v)
                 v_loss_v = F.mse_loss(val_v.squeeze(),ref_vals_v.detach())
