@@ -1,0 +1,55 @@
+Chapter 1: What is Reinforcement Learning
+AI
+    Machine Learning
+        Tasks 
+            Supervised Learning
+            Unsupervised Learning
+            Reinforcement Learning
+                Concepts: 
+                    experience: (current_state, action, next_state, reward)
+                    return:The sum of rewards collected in a single episode
+                Categories:
+                    policy-based:approximate policies
+                    value-based:approximate value functions
+                    actor-critic:approximate both policies and value functions
+                    model-based:approximate models, that is, learn mappings from observations to new observations and/or rewards
+                    model-free:don't approximate models
+        Methods and Toolboxes
+            Traditional Machine Learning Methods
+            Deep Learning
+
+Frozen Lake:
+    state: one single variable called location l, the variable l can take values from {0,1,...15}
+    state space: The set of all possible states, which can be infinie. but for frozen lake, it's {0,1,...15}
+        initial state:
+        terminal state:absorbing state, all transitions from a terminal state ends in itself, with probability 1 and 0 reward.
+    action: one single variable called direction d, the variable takes value from {up,down,left,right}
+    action space: set of all possible actions, which can be infinie, but for frozen lake, it's {up,down,left,right}
+    transition function:T(s,a,s') returns a probability, or T(s,a) returns a dict: T(s,a)={s1:p1,s2:p2,...,sn:pn}, p1+p2+...+pn=1
+        probability distribution: p(s'|s,a)
+    reward function:r(s,a,s'), margin with s', we get r(s,a), then margin with a, we get r(s)
+    horizon:also called: epoch, cycle, iteration, or even interaction
+        finite horizon:agent knows the task will terminate in a finite number of time steps
+        greedy horizon:the episode terminates immediately after one interaction
+        infinite horizon:the agent doesn’t have a predetermined time step limit. indefinite horizon task
+    episode, trial, period, or stage:sequence of consecutive time steps from the beginning to the end of an episodic task
+
+MDP(S,A,T,R,S_theta,Gamma,H)
+    S:state space
+    A:action space
+    T:transition function
+    R:reward signal
+    S_theta:inital distribution
+    Gamma:discount factor
+    H:Horizon
+
+POMDP(S,A,T,R,S_theta,Gamma,H,O,Epsilon)
+    S:state space
+    A:action space
+    T:transition function
+    R:reward signal
+    S_theta:inital distribution
+    Gamma:discount factor
+    H:Horizon
+    O:observation space
+    Epsilon:an emission probability Epsilon that defines the probability of showing an observation Ot given a state St
