@@ -8,6 +8,10 @@ AI
                 Concepts: 
                     experience: (current_state, action, next_state, reward)
                     return:The sum of rewards collected in a single episode
+                    policy:a universal plan, i.e., what to do for every state
+                    state-value function: also known as value function or V-function or V_pi(s)
+                    action-value function: also known as Q-function or Q_pi(s,a)
+                    policy evaluation:P77 
                 Categories:
                     policy-based:approximate policies
                     value-based:approximate value functions
