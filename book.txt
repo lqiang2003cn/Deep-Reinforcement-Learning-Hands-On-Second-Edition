@@ -11,13 +11,16 @@ AI
                     policy:a universal plan, i.e., what to do for every state
                     state-value function: also known as value function or V-function or V_pi(s)
                     action-value function: also known as Q-function or Q_pi(s,a)
-                    policy evaluation:P77 
+                    policy evaluation(P77): 
+                    policy improvement(P84):
+                    policy iteration = policy evaluation + policy improvement
+                    value iteration(P93):iterate the optimal value
                 Categories:
                     policy-based:approximate policies
                     value-based:approximate value functions
                     actor-critic:approximate both policies and value functions
                     model-based:approximate models, that is, learn mappings from observations to new observations and/or rewards
-                    model-free:don't approximate models
+                    model-free:don't approximate models 
         Methods and Toolboxes
             Traditional Machine Learning Methods
             Deep Learning
