@@ -25,6 +25,7 @@ AI
             Traditional Machine Learning Methods
             Deep Learning
 
+
 Frozen Lake:
     state: one single variable called location l, the variable l can take values from {0,1,...15}
     state space: The set of all possible states, which can be infinie. but for frozen lake, it's {0,1,...15}
@@ -41,6 +42,7 @@ Frozen Lake:
         infinite horizon:the agent doesn’t have a predetermined time step limit. indefinite horizon task
     episode, trial, period, or stage:sequence of consecutive time steps from the beginning to the end of an episodic task
 
+
 MDP(S,A,T,R,S_theta,Gamma,H)
     S:state space
     A:action space
@@ -49,6 +51,7 @@ MDP(S,A,T,R,S_theta,Gamma,H)
     S_theta:inital distribution
     Gamma:discount factor
     H:Horizon
+
 
 POMDP(S,A,T,R,S_theta,Gamma,H,O,Epsilon)
     S:state space
@@ -60,3 +63,43 @@ POMDP(S,A,T,R,S_theta,Gamma,H,O,Epsilon)
     H:Horizon
     O:observation space
     Epsilon:an emission probability Epsilon that defines the probability of showing an observation Ot given a state St
+
+
+RL learning style:
+    how manay steps of the interaction:
+        sequential: multi-steps
+        one-step
+    whether have access to MDP:
+        evaluative: no access to MDP
+        Supervised: have access to MPD
+    how the get learning experience:
+        sampled: sample experiences from the environment
+        exhaustive: ?
+*************** sequential, evaluative, sampled is the hardest ***************
+
+*************** Chapter 4 ***************
+Exploration and Exploitation:
+    basic exploration:
+        pure exploitation: always greedy, easily get stucked
+        pure exploration: always random, gather information
+        epsilon-greedy: almost always greedy but sometimes explore
+        decaying epsilon-greedy: first totally random, then decay epsilon, with less random
+            linearly decaying epsilon-greedy strategy
+            exponentially decaying epsilon-greedy strategy
+        optimistic initialization:start with optimistic Q values and counts(>1), decreasing rewards, and always greedy
+    advanced exploration:
+        softmax:do softmax to Q(s,a), get a distribution of Q values
+        upper confidence bound(UCB): encourage exploring actions that is less selected
+        thompson sampling:regard Q values as random variables and sample values from their distributions, thus introducing randomness
+
+
+*************** Chapter 5 ***************
+Estimating the value of policies:
+    MC methods:(not biased, but high variance)
+        First-visit Monte Carlo: Improving estimates after each episode
+        Every-visit Monte Carlo: Improving estimates every time we see a state
+    Temporal-difference learning(TD): Improving estimates after each step(biased, but low variance)
+    Methods between MC and TD:
+        N-step TD learning: Improving estimates after a couple of steps(More like MC, not biased, but high variance)
+        Forward-view TD(λ): Improving estimates of all visited states
+        Backward-view TD(λ) or TD(λ) for short: Improving estimates of all visited states after each step(More like TD, biased, but low variance)
