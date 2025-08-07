@@ -65,17 +65,7 @@ POMDP(S,A,T,R,S_theta,Gamma,H,O,Epsilon)
     Epsilon:an emission probability Epsilon that defines the probability of showing an observation Ot given a state St
 
 
-RL learning style:
-    how manay steps of the interaction:
-        sequential: multi-steps
-        one-step
-    whether have access to MDP:
-        evaluative: no access to MDP
-        Supervised: have access to MPD
-    how the get learning experience:
-        sampled: sample experiences from the environment
-        exhaustive: ?
-*************** sequential, evaluative, sampled is the hardest ***************
+
 
 *************** Chapter 4 ***************
 Exploration and Exploitation:
@@ -93,6 +83,7 @@ Exploration and Exploitation:
         thompson sampling:regard Q values as random variables and sample values from their distributions, thus introducing randomness
 
 
+
 *************** Chapter 5 ***************
 Estimating the value of policies:
     MC methods:(not biased, but high variance)
@@ -103,3 +94,96 @@ Estimating the value of policies:
         N-step TD learning: Improving estimates after a couple of steps(More like MC, not biased, but high variance)
         Forward-view TD(λ): Improving estimates of all visited states
         Backward-view TD(λ) or TD(λ) for short: Improving estimates of all visited states after each step(More like TD, biased, but low variance)
+
+
+
+*************** Chapter 6 ***************
+generalized policy iteration (GPI): estimate, improve, estimate, improve...
+Seperate things:
+    Gather Data: experiences
+    Learn from Data: Learn Value function or models
+    Improve from Data:
+RL problem types:
+    Non-interactive learning problems
+    Interactive learning problems
+
+Monte Carlo control: Improving policies after each episode. Control means involving two phrases: 
+    policy-evaluation: Monte Carlo prediction for Q(s,a), not V(s)
+    policy-improvement: a decaying epsilon-greedy action-selection strategy
+
+SARSA: Improving policies after each step
+    policy-evaluation: TD prediction for Q(s,a), on-policy
+    policy-improvement: a decaying epsilon-greedy action-selection strategy
+
+Q-learning: 
+    policy-evaluation: TD prediction for Q(s,a), off-policy
+    policy-improvement: a decaying epsilon-greedy action-selection strategy
+
+double Q-learning:
+    policy-evaluation: TD prediction for Q(s,a), off-policy, but using two Q estimations
+    policy-improvement: a decaying epsilon-greedy action-selection strategy
+
+
+
+*************** Chapter 7 ***************
+SARSA(λ): Improving policies after each step based on multi-step estimates
+    policy-evaluation(for learning):
+        TD prediction for Q(s,a)
+        on-policy
+        accumulating trace or replacing trace 
+    policy-improvement(for exploration): a decaying epsilon-greedy action-selection strategy 
+
+Watkins’s Q(λ): Decoupling behavior from learning, again
+    policy-evaluation: 
+        TD prediction for Q(s,a)
+        off-policy: clear eligible traces if next action is not optimal ?
+        accumulating trace or replacing trace 
+    policy-improvement: a decaying epsilon-greedy action-selection strategy
+
+Model-based RL:
+    Dyna-Q
+        sample uniformly
+    Trajectory sampling
+        sample from the current state
+
+
+
+*************** Chapter 8 ***************
+RL learning style:
+    Sequential vs One-step
+        sequential: multi-steps
+        one-shot: just one step
+    Evaluative vs Supervised
+        evaluative: no supervision, must explore
+        Supervised: correct answer is provided
+    Sampled vs Exhaustive:
+        sampled: impossible to sample all possible feedbacks because the problem is more complext
+        exhaustive: can explore and sample all the possible feedback
+
+neural fitted Q (NFQ):
+    approximate Q(s,a)
+    4 in -> 2 out
+    generalized policy iteration
+    td target
+    epsilon-greedy exploration: constant epsilon
+
+DQN(Nature DQN or Vanilla DQN):Deep Q-networks
+    two networks:
+        online network
+        target network
+    replay buffer
+    exploration strategies:
+        linearly decaying epsilon-greedy exploration strategy: linearly decaying epsilon
+        exponentially decaying epsilon-greedy exploration strategy: exponentially decaying epsilon
+        softmax: select action based on softmax of Q(s,a), a distribution
+
+Double DQN(DDQN):
+    two networks:
+        online network: a_star = argmax Q(s,a), tells which action has the max value, that is a_star
+        target network: a_val = Q(s, a_start), tell the value of a_star, as a cross-validation
+    gradient clipping:
+        don't update network's weight too much, even loss is large, because we are not always sure we are updating in the right direction in RL
+
+
+*************** Chapter 9 ***************
+
